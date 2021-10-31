@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/TunnelWork/Ulysses.Lib/payment"
 	"github.com/TunnelWork/payment.PayPal/internal/sqlwrapper"
@@ -41,7 +42,7 @@ func (pg *PrepaidGateway) handlerPaypalExperienceOnClose(c *gin.Context) {
 	switch Action {
 	case "error":
 		// reportTime := time.Now()
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNPAID,
@@ -58,7 +59,7 @@ func (pg *PrepaidGateway) handlerPaypalExperienceOnClose(c *gin.Context) {
 		pg._onApprove(c, OrderID, ReferenceID, CaptureID)
 	case "cancel":
 		// reportTime := time.Now()
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.CLOSED,
@@ -86,7 +87,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	// Get latest Access Token
 	_, err := pg.client.GetAccessToken(context.Background())
 	if err != nil { // Failed to communicate with PayPal, fail.
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNKNOWN,
@@ -105,7 +106,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	var order *pp.Order
 	order, err = pg.client.GetOrder(context.Background(), OrderID)
 	if err != nil { // Failed to communicate with PayPal, fail.
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNKNOWN,
@@ -121,7 +122,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	}
 	// No bundle order allowed.
 	if len(order.PurchaseUnits) != 1 {
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNKNOWN,
@@ -137,7 +138,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	}
 	// Order's ReferenceID must match reported ReferenceID
 	if ReferenceID != order.PurchaseUnits[0].ReferenceID {
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNKNOWN,
@@ -155,7 +156,9 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	// Checkout the Reference from Database
 	requestOnRecord, err := sqlwrapper.SelectPaymentRequest(pg.db, pg.orderSqlTable, ReferenceID)
 	if err != nil {
-		pg.UpdateHandler(
+		// fmt.Printf("PTR: %v\n", pg.UpdateHandler)
+		time.Sleep(1 * time.Second)
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNKNOWN,
@@ -173,7 +176,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	// Match paid currency and value
 	paypalPricing, err := strconv.ParseFloat(order.PurchaseUnits[0].Amount.Value, 64)
 	if err != nil {
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNKNOWN,
@@ -188,7 +191,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 		return
 	}
 	if requestOnRecord.Item.Currency != order.PurchaseUnits[0].Amount.Currency || requestOnRecord.Item.Price != paypalPricing {
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNKNOWN,
@@ -206,7 +209,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	// Only these 2 status means paid
 	// TODO: Add Capture attempt upon seeing SAVED
 	if order.Status != "APPROVED" && order.Status != "COMPLETED" {
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.UNPAID,
@@ -224,7 +227,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	// All verification good. Update the database
 	err = sqlwrapper.AppendOrderInfo(pg.db, pg.orderSqlTable, order, CaptureID)
 	if err != nil {
-		pg.UpdateHandler(
+		(*pg.UpdateHandler)(
 			ReferenceID,
 			payment.PaymentResult{
 				Status: payment.PAID,
@@ -245,7 +248,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 	}
 
 	// All good!
-	pg.UpdateHandler(
+	(*pg.UpdateHandler)(
 		ReferenceID,
 		payment.PaymentResult{
 			Status: payment.PAID,
@@ -257,7 +260,7 @@ func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID
 			Msg: fmt.Sprintf("(Verified)ReferenceID %s: Payment confirmed.", ReferenceID),
 		},
 	)
-	c.JSON(http.StatusBadRequest, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"type":    "payment",
 		"message": "PAYMENT_OK",

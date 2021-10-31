@@ -34,7 +34,9 @@ const (
 )
 
 var (
-	resultMutex  sync.Mutex            = sync.Mutex{}
+	pg           payment.PrepaidGateway
+	resultMutex  sync.Mutex = sync.Mutex{}
+	globalRefID  string
 	latestResult payment.PaymentResult = payment.PaymentResult{
 		Msg: "NEW",
 	}
@@ -82,24 +84,12 @@ func TestInitialization(t *testing.T) {
 }
 
 func TestCheckout(t *testing.T) {
-	router := gin.Default()
-
-	router.GET("orderform", func(c *gin.Context) {
-		resultMutex.Lock()
-		defer resultMutex.Unlock()
-		c.Data(http.StatusOK, ContentTypeHTML, []byte(`<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script><title>Order Form PayPal Gateway</title></head><body>`+htmlToRender+"</body></html>"))
-	})
-
-	api.FinalizeGinEngine(router, "api")
-
-	go router.Run(":7990")
-
 	db, err := stagingDB()
 	if err != nil {
 		t.Errorf("stagingDB(): %s", err)
 	}
 
-	pg, err := paypal.NewPrepaidGateway(db, "staging-test-instance", map[string]string{
+	pg, err = paypal.NewPrepaidGateway(db, "staging-test-instance", map[string]string{
 		// These 3 needs to be acquired from PayPal developer dashboard
 		"clientID": `ARRirLbsebmjl6qOiWuhTQFOhko6HCd-BucbAOnHjtzO5ZZRtG1RxC6SmB18b5fEAmj_oLZTKn8znK1Q`,
 		"secretID": `EKdLMEUSbkwUkC3i4MqtbNE5Oq4cSdTOjat4sEV4NiaMHt5LNr25843yy2v90B3jW0iIjEB32eztDP-a`,
@@ -110,12 +100,21 @@ func TestCheckout(t *testing.T) {
 		"orderSqlTable": `prepaid_paypal_orders_2`, // if unset, will use default value: prepaid_paypal_orders
 	})
 
+	t.Logf("original ptr: %v\n", pg.(*paypal.PrepaidGateway).UpdateHandler)
+
 	pg.OnStatusChange(func(referenceID string, newResult payment.PaymentResult) {
 		resultMutex.Lock()
 		defer resultMutex.Unlock()
+		globalRefID = referenceID
 		latestResult = newResult
-		t.Logf("Received change on RefID %s", referenceID)
+
+		t.Logf("Received change on RefID %s\n", referenceID)
+		t.Logf("Message: %s\n", newResult.Msg)
 	})
+
+	t.Logf("new ptr: %v\n", pg.(*paypal.PrepaidGateway).UpdateHandler)
+
+	t.Logf("try calling ptr...\n")
 
 	if err != nil {
 		t.Errorf("paypal.NewPrepaidGateway(): %s\n", err)
@@ -125,9 +124,11 @@ func TestCheckout(t *testing.T) {
 		t.Errorf("harpocrates can't give a proper password\n")
 	}
 
+	RefID := "StagingTest_" + refIdSuffix
+
 	pr := payment.PaymentRequest{
 		Item: payment.PaymentUnit{
-			ReferenceID: "StagingTest#" + refIdSuffix,
+			ReferenceID: RefID,
 			Currency:    "USD",
 			Price:       2.45,
 		},
@@ -142,6 +143,18 @@ func TestCheckout(t *testing.T) {
 	htmlToRender = html
 	resultMutex.Unlock()
 
+	router := gin.Default()
+
+	router.GET("orderform", func(c *gin.Context) {
+		resultMutex.Lock()
+		defer resultMutex.Unlock()
+		c.Data(http.StatusOK, ContentTypeHTML, []byte(`<html><head><script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script><title>Order Form PayPal Gateway</title></head><body>`+htmlToRender+"</body></html>"))
+	})
+
+	api.FinalizeGinEngine(router, "api")
+
+	go router.Run(":7990")
+
 	t.Logf("Order Form created and is live at: http://127.0.0.1:7990/orderform")
 
 	// t.Logf("HTML, please try to pay: \n%s\n", html)
@@ -150,12 +163,13 @@ func TestCheckout(t *testing.T) {
 	// Poll the result every 5 seconds
 	for {
 		resultMutex.Lock()
-		if latestResult.Msg != "NEW" {
+		if globalRefID == RefID {
 			resultMutex.Unlock()
 			break
 		}
 		resultMutex.Unlock()
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
+		// t.Logf("new ptr: %v\n", pg.(*paypal.PrepaidGateway).UpdateHandler)
 	}
 
 }

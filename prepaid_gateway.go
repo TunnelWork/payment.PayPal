@@ -57,7 +57,7 @@ type PrepaidGateway struct {
 	onClose func(*gin.Context)
 
 	// Handler func used to notify the Ulysses server
-	UpdateHandler func(referenceID string, newResult payment.PaymentResult)
+	UpdateHandler *func(referenceID string, newResult payment.PaymentResult)
 }
 
 // NewPrepaidGateway() is a payment.PrepaidGatewayGen
@@ -111,9 +111,6 @@ func NewPrepaidGateway(db *sql.DB, instanceID string, initConf interface{}) (pay
 		client:        c,
 	}
 	pg.onClose = pg.handlerPaypalExperienceOnClose
-
-	// https://ulysses.tunnel.work/api/payment/callback/paypal/$id/onClose
-	api.CPOST(api.PaymentCallback, fmt.Sprintf("paypal/%s/onClose", instanceID), (*gin.HandlerFunc)(&pg.onClose))
 
 	return &pg, nil
 }
@@ -278,11 +275,10 @@ func (pg *PrepaidGateway) IsRefundable(referenceID string) bool {
 	if err != nil { // Failed to communicate with PayPal, fail.
 		return false
 	}
-	if order.Status != "APPROVED" || order.Status != "COMPLETED" {
+	if order.Status != "APPROVED" && order.Status != "COMPLETED" {
 		return false // Can't refund an unpaid order
 	}
-	var currency string
-	currency = order.PurchaseUnits[0].Amount.Currency
+	currency := order.PurchaseUnits[0].Amount.Currency
 	var amountPaid float64
 	amountPaid, _ = strconv.ParseFloat(order.PurchaseUnits[0].Amount.Value, 64)
 
@@ -320,11 +316,10 @@ func (pg *PrepaidGateway) Refund(rr payment.RefundRequest) error {
 	if err != nil { // Failed to communicate with PayPal, fail.
 		return err
 	}
-	if order.Status != "APPROVED" || order.Status != "COMPLETED" {
+	if order.Status != "APPROVED" && order.Status != "COMPLETED" {
 		return ErrOrderNotPaid // Can't refund an unpaid order
 	}
-	var currency string
-	currency = order.PurchaseUnits[0].Amount.Currency
+	currency := order.PurchaseUnits[0].Amount.Currency
 	var amountPaid float64
 	amountPaid, _ = strconv.ParseFloat(order.PurchaseUnits[0].Amount.Value, 64)
 
@@ -355,12 +350,16 @@ func (pg *PrepaidGateway) Refund(rr payment.RefundRequest) error {
 	}
 
 	if refundResp.Status != "COMPLETED" {
-		return errors.New(fmt.Sprintf("paypal: refund status for Reference ID %s is %s, expecting COMPLETED", rr.Item.ReferenceID, refundResp.Status))
+		return fmt.Errorf("paypal: refund status for Reference ID %s is %s, expecting COMPLETED", rr.Item.ReferenceID, refundResp.Status)
 	}
 	return nil
 }
 
 func (pg *PrepaidGateway) OnStatusChange(UpdateHandler func(referenceID string, newResult payment.PaymentResult)) error {
-	pg.UpdateHandler = UpdateHandler
+	pg.UpdateHandler = &UpdateHandler
+
+	// https://ulysses.tunnel.work/api/payment/callback/paypal/$id/onClose
+	api.CPOST(api.PaymentCallback, fmt.Sprintf("paypal/%s/onClose", pg.instanceID), (*gin.HandlerFunc)(&pg.onClose))
+
 	return nil
 }

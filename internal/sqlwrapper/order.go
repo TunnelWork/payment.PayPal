@@ -128,7 +128,7 @@ func SelectPaymentRequest(db *sql.DB, tbl string, referenceID string) (payment.P
 	var Currency string
 	var PaidValue float64
 
-	stmtSelectPaymentRequest, err := db.Prepare(`SELECT ReferenceID, Currency, Total FROM ` + tbl + ` WHERE ReferenceID = %s;`)
+	stmtSelectPaymentRequest, err := db.Prepare(`SELECT ReferenceID, Currency, Total FROM ` + tbl + ` WHERE ReferenceID = ?`)
 	if err != nil {
 		return payment.PaymentRequest{}, err
 	}
@@ -155,7 +155,7 @@ func SelectRefunded(db *sql.DB, tbl string, referenceID string) (string, float64
 	var Refunded float64
 	var Currency string
 
-	stmtSelectPaymentRequest, err := db.Prepare(`SELECT Currency, Refunded FROM ` + tbl + ` WHERE ReferenceID = %s;`)
+	stmtSelectPaymentRequest, err := db.Prepare(`SELECT Currency, Refunded FROM ` + tbl + ` WHERE ReferenceID = ?;`)
 	if err != nil {
 		return Currency, Refunded, err
 	}
@@ -172,7 +172,7 @@ func SelectCaptureID(db *sql.DB, tbl string, referenceID string) (string, error)
 
 	var CaptureID string
 
-	stmtSelectPaymentRequest, err := db.Prepare(`SELECT CaptureID FROM ` + tbl + ` WHERE ReferenceID = %s;`)
+	stmtSelectPaymentRequest, err := db.Prepare(`SELECT CaptureID FROM ` + tbl + ` WHERE ReferenceID = ?;`)
 	if err != nil {
 		return CaptureID, err
 	}
