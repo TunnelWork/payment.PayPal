@@ -26,16 +26,16 @@ var (
 
 	ExampleInitConf = map[string]string{
 		// These 3 needs to be acquired from PayPal developer dashboard
-		"clientID": `ARRirLbsebmjl6qOiWuhTQFOhko6HCd-BucbAOnHjtzO5ZZRtG1RxC6SmB18b5fEAmj_oLZTKn8znK1Q`,
-		"secretID": `EKdLMEUSbkwUkC3i4MqtbNE5Oq4cSdTOjat4sEV4NiaMHt5LNr25843yy2v90B3jW0iIjEB32eztDP-a`,
-		"apiBase":  `https://api-m.sandbox.paypal.com`,
+		"clientID": `ABCD`,
+		"secretID": `EFGHIJKLMNOPQRST`,
+		"apiBase":  `https://api-m.sandbox.paypal.com`, // or https://api-m.paypal.com for PROD
 
 		// A preference for the table name to be used for saving paypal order details.
 		// Don't include DB name, for it is protected by *sql.DB.
 		"orderSqlTable": `prepaid_paypal_orders_2`, // if unset, will use default value: prepaid_paypal_orders
 
 		// After the payment being executed, user will be 301 to returnURL
-		"returnURL": `https://ulysses.tunnel.work/billing.html`,
+		"returnURL": `https://ulysses.tunnel.work/billing.html`, // reserved for future. tmp unused.
 	}
 )
 
@@ -155,7 +155,7 @@ func (pg *PrepaidGateway) CheckoutForm(pr payment.PaymentRequest) (HTMLCheckoutF
 	var paypalButtonOnApprove string = `onApprove: function(data, actions) {
         return actions.order.capture().then(function(orderData) {
           $.post( "` + OnCloseNotifyURL + `", { order_id: orderData.id, ref_id: orderData.purchase_units[0].reference_id, action: "approve", capture_id: orderData.purchase_units[0].payments.captures[0].id })
-          .done(function( data ) {
+          .always(function( data ) {
             $RENDER_PAYMENT_RESULT(data);
           });
         });
@@ -165,7 +165,7 @@ func (pg *PrepaidGateway) CheckoutForm(pr payment.PaymentRequest) (HTMLCheckoutF
 	// which will use the data as input
 	var paypalButtonOnCancel string = `onCancel: function(data) {
         $.post( "` + OnCloseNotifyURL + `", { ref_id: "` + pr.Item.ReferenceID + `", action: "cancel" })
-        .done(function( data ) {
+        .always(function( data ) {
             $RENDER_PAYMENT_RESULT(data);
         });
     },`
@@ -174,7 +174,7 @@ func (pg *PrepaidGateway) CheckoutForm(pr payment.PaymentRequest) (HTMLCheckoutF
 	// which will use the data and err as input
 	var paypalButtonOnError string = `onError: function(err) {
         $.post( "` + OnCloseNotifyURL + `", { ref_id: "` + pr.Item.ReferenceID + `", action: "error" })
-        .done(function( data ) {
+        .always(function( data ) {
             $RENDER_PAYMENT_RESULT(data, err);
         });
     }`
@@ -355,8 +355,8 @@ func (pg *PrepaidGateway) Refund(rr payment.RefundRequest) error {
 	return nil
 }
 
-func (pg *PrepaidGateway) OnStatusChange(UpdateHandler func(referenceID string, newResult payment.PaymentResult)) error {
-	pg.UpdateHandler = &UpdateHandler
+func (pg *PrepaidGateway) OnStatusChange(UpdateHandler *func(referenceID string, newResult payment.PaymentResult)) error {
+	pg.UpdateHandler = UpdateHandler
 
 	// https://ulysses.tunnel.work/api/payment/callback/paypal/$id/onClose
 	api.CPOST(api.PaymentCallback, fmt.Sprintf("paypal/%s/onClose", pg.instanceID), (*gin.HandlerFunc)(&pg.onClose))

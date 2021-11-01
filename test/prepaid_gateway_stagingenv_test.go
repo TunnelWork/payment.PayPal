@@ -34,6 +34,8 @@ const (
 )
 
 var (
+	clientID     string = "ABCD"
+	secretID     string = "EFGH"
 	pg           payment.PrepaidGateway
 	resultMutex  sync.Mutex = sync.Mutex{}
 	globalRefID  string
@@ -69,8 +71,8 @@ func TestInitialization(t *testing.T) {
 
 	_, err = paypal.NewPrepaidGateway(db, "staging-test-instance", map[string]string{
 		// These 3 needs to be acquired from PayPal developer dashboard
-		"clientID": `ARRirLbsebmjl6qOiWuhTQFOhko6HCd-BucbAOnHjtzO5ZZRtG1RxC6SmB18b5fEAmj_oLZTKn8znK1Q`,
-		"secretID": `EKdLMEUSbkwUkC3i4MqtbNE5Oq4cSdTOjat4sEV4NiaMHt5LNr25843yy2v90B3jW0iIjEB32eztDP-a`,
+		"clientID": clientID,
+		"secretID": secretID,
 		"apiBase":  `https://api-m.sandbox.paypal.com`,
 
 		// A preference for the table name to be used for saving paypal order details.
@@ -83,6 +85,32 @@ func TestInitialization(t *testing.T) {
 	}
 }
 
+func TestGatewayRegistration(t *testing.T) {
+	db, err := stagingDB()
+	if err != nil {
+		t.Errorf("stagingDB(): %s", err)
+	}
+
+	gw, err := payment.NewPrepaidGateway(db, "Paypal Prepaid", "staging-test-instance", map[string]string{
+		// These 3 needs to be acquired from PayPal developer dashboard
+		"clientID": clientID,
+		"secretID": secretID,
+		"apiBase":  `https://api-m.sandbox.paypal.com`,
+
+		// A preference for the table name to be used for saving paypal order details.
+		// Don't include DB name, for it is protected by *sql.DB.
+		"orderSqlTable": `prepaid_paypal_orders_2`, // if unset, will use default value: prepaid_paypal_orders
+	})
+
+	if err != nil {
+		t.Errorf("payment.NewPrepaidGateway(): %s", err)
+	}
+
+	if _, ok := gw.(*paypal.PrepaidGateway); !ok {
+		t.Errorf("Type Error.")
+	}
+}
+
 func TestCheckout(t *testing.T) {
 	db, err := stagingDB()
 	if err != nil {
@@ -91,8 +119,8 @@ func TestCheckout(t *testing.T) {
 
 	pg, err = paypal.NewPrepaidGateway(db, "staging-test-instance", map[string]string{
 		// These 3 needs to be acquired from PayPal developer dashboard
-		"clientID": `ARRirLbsebmjl6qOiWuhTQFOhko6HCd-BucbAOnHjtzO5ZZRtG1RxC6SmB18b5fEAmj_oLZTKn8znK1Q`,
-		"secretID": `EKdLMEUSbkwUkC3i4MqtbNE5Oq4cSdTOjat4sEV4NiaMHt5LNr25843yy2v90B3jW0iIjEB32eztDP-a`,
+		"clientID": clientID,
+		"secretID": secretID,
 		"apiBase":  `https://api-m.sandbox.paypal.com`,
 
 		// A preference for the table name to be used for saving paypal order details.
@@ -100,9 +128,8 @@ func TestCheckout(t *testing.T) {
 		"orderSqlTable": `prepaid_paypal_orders_2`, // if unset, will use default value: prepaid_paypal_orders
 	})
 
-	t.Logf("original ptr: %v\n", pg.(*paypal.PrepaidGateway).UpdateHandler)
-
-	pg.OnStatusChange(func(referenceID string, newResult payment.PaymentResult) {
+	// t.Logf("original ptr: %v\n", pg.(*paypal.PrepaidGateway).UpdateHandler)
+	updateHandler := func(referenceID string, newResult payment.PaymentResult) {
 		resultMutex.Lock()
 		defer resultMutex.Unlock()
 		globalRefID = referenceID
@@ -110,11 +137,13 @@ func TestCheckout(t *testing.T) {
 
 		t.Logf("Received change on RefID %s\n", referenceID)
 		t.Logf("Message: %s\n", newResult.Msg)
-	})
+	}
 
-	t.Logf("new ptr: %v\n", pg.(*paypal.PrepaidGateway).UpdateHandler)
+	pg.OnStatusChange(&updateHandler)
 
-	t.Logf("try calling ptr...\n")
+	// t.Logf("new ptr: %v\n", pg.(*paypal.PrepaidGateway).UpdateHandler)
+
+	// t.Logf("try calling ptr...\n")
 
 	if err != nil {
 		t.Errorf("paypal.NewPrepaidGateway(): %s\n", err)

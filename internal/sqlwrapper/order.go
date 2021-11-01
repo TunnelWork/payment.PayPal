@@ -13,33 +13,38 @@ func PendingOrderID(db *sql.DB, tbl string, request payment.PaymentRequest, gate
 		return ErrNilPointer
 	}
 
-	// Then, insert the new one
-	stmtInsertOrder, err := db.Prepare(`INSERT INTO ` + tbl + ` (
-        ReferenceID, 
-        GatewayType,
-        Currency,
-        Total,
-        CreatedAt
-    ) VALUE(
-        ?,
-        ?,
-        ?,
-        ?,
-        NOW()
-    );`)
-	if err != nil {
+	// Check if there's such ReferenceID on record (and no known payment)
+	captureId, captureErr := SelectCaptureID(db, tbl, request.Item.ReferenceID)
+	if captureErr == nil && captureId != "" { // Have such line, and captureId already filled
+		// Don't insert new
+	} else {
+		stmtInsertOrder, err := db.Prepare(`INSERT INTO ` + tbl + ` (
+			ReferenceID, 
+			GatewayType,
+			Currency,
+			Total,
+			CreatedAt
+		) VALUE(
+			?,
+			?,
+			?,
+			?,
+			NOW()
+		);`)
+		if err != nil {
+			return err
+		}
+		defer stmtInsertOrder.Close()
+
+		_, err = stmtInsertOrder.Exec(
+			request.Item.ReferenceID,
+			gatewayType,
+			request.Item.Currency,
+			request.Item.Price,
+		)
 		return err
 	}
-	defer stmtInsertOrder.Close()
-
-	_, err = stmtInsertOrder.Exec(
-		request.Item.ReferenceID,
-		gatewayType,
-		request.Item.Currency,
-		request.Item.Price,
-	)
-
-	return err
+	return nil
 }
 
 func AppendOrderInfo(db *sql.DB, tbl string, order *pp.Order, captureID string) error {

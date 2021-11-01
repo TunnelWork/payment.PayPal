@@ -1,7 +1,7 @@
 github.com/TunnelWork/Harpocrates v1.0.0 h1:UnogtC1UTL1gDRUoqEvPF2bZM/uVlJVy/NnCbisf3x4=
 github.com/TunnelWork/Harpocrates v1.0.0/go.mod h1:+I/F5JiIvWsllxHEInacG+j9t2IO9jqjvhp1KT0XnKw=
-github.com/TunnelWork/Ulysses.Lib v0.0.7 h1:/CAWT3Ia/9/DcJl+aEhfF4trYE7j3eLpR9/VCojnyFo=
-github.com/TunnelWork/Ulysses.Lib v0.0.7/go.mod h1:SwbMRLevpvQptQEHgC+2bU7Cr0tEk9+z7pdi5gT3JwA=
+github.com/TunnelWork/Ulysses.Lib v0.0.9 h1:RV2OqEOOuYjrohrdMNAfTWhKIQIY/lyjbtpJ71zdjCs=
+github.com/TunnelWork/Ulysses.Lib v0.0.9/go.mod h1:SwbMRLevpvQptQEHgC+2bU7Cr0tEk9+z7pdi5gT3JwA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
