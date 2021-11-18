@@ -64,7 +64,7 @@ func (pg *PrepaidGateway) handlerPaypalExperienceOnClose(c *gin.Context) {
 
 }
 
-func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID string, ReferenceID string, CaptureID string) {
+func (pg *PrepaidGateway) _onApprove(c *gin.Context, OrderID, ReferenceID, CaptureID string) {
 	// Fetch the OrderID's detail from PayPal:
 
 	// Get latest Access Token
