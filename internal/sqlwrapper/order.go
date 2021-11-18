@@ -95,7 +95,7 @@ func AppendOrderInfo(db *sql.DB, tbl string, order *pp.Order, captureID string) 
 	return err
 }
 
-func SelectOrderID(db *sql.DB, tbl string, referenceID string) (orderID string, err error) {
+func SelectOrderID(db *sql.DB, tbl, referenceID string) (orderID string, err error) {
 	if db == nil || referenceID == "" {
 		return "", ErrNilPointer
 	}
@@ -109,7 +109,7 @@ func SelectOrderID(db *sql.DB, tbl string, referenceID string) (orderID string, 
 	return orderID, err
 }
 
-func SelectOrderDetail(db *sql.DB, tbl string, referenceID string) (orderDetailsStr string, err error) {
+func SelectOrderDetail(db *sql.DB, tbl, referenceID string) (orderDetailsStr string, err error) {
 	if db == nil || referenceID == "" {
 		return "", ErrNilPointer
 	}
@@ -124,7 +124,7 @@ func SelectOrderDetail(db *sql.DB, tbl string, referenceID string) (orderDetails
 	return orderDetailsStr, nil
 }
 
-func SelectPaymentRequest(db *sql.DB, tbl string, referenceID string) (payment.PaymentRequest, error) {
+func SelectPaymentRequest(db *sql.DB, tbl, referenceID string) (payment.PaymentRequest, error) {
 	if db == nil || referenceID == "" {
 		return payment.PaymentRequest{}, ErrNilPointer
 	}
@@ -152,7 +152,7 @@ func SelectPaymentRequest(db *sql.DB, tbl string, referenceID string) (payment.P
 	}, nil
 }
 
-func SelectRefunded(db *sql.DB, tbl string, referenceID string) (string, float64, error) {
+func SelectRefunded(db *sql.DB, tbl, referenceID string) (string, float64, error) {
 	if db == nil || referenceID == "" {
 		return "", 0, ErrNilPointer
 	}
@@ -170,7 +170,7 @@ func SelectRefunded(db *sql.DB, tbl string, referenceID string) (string, float64
 	return Currency, Refunded, err
 }
 
-func SelectCaptureID(db *sql.DB, tbl string, referenceID string) (string, error) {
+func SelectCaptureID(db *sql.DB, tbl, referenceID string) (string, error) {
 	if db == nil || referenceID == "" {
 		return "", ErrNilPointer
 	}
