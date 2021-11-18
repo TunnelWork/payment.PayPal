@@ -13,7 +13,7 @@ func InitializeTables(db *sql.DB, tbl string) error {
 	}
 
 	var ordersTblCreationQuery string = ordersTblCreation
-	ordersTblCreationQuery = strings.Replace(ordersTblCreationQuery, "paypal_orders", tbl, -1)
+	ordersTblCreationQuery = strings.ReplaceAll(ordersTblCreationQuery, "paypal_orders", tbl)
 
 	// orders
 	stmtOrdersTblCreation, err := db.Prepare(ordersTblCreationQuery)

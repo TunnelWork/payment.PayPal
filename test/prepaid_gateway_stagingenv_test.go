@@ -166,8 +166,8 @@ func TestCheckout(t *testing.T) {
 	if err != nil {
 		t.Errorf("pg.CheckoutForm(): %s\n", err)
 	}
-	html = strings.Replace(html, "$PAYMENT_CALLBACK_BASE", "http://127.0.0.1:7990/api/payment/callback/", -1)
-	html = strings.Replace(html, "$RENDER_PAYMENT_RESULT", "console.log", -1)
+	html = strings.ReplaceAll(html, "$PAYMENT_CALLBACK_BASE", "http://127.0.0.1:7990/api/payment/callback/")
+	html = strings.ReplaceAll(html, "$RENDER_PAYMENT_RESULT", "console.log")
 	resultMutex.Lock()
 	htmlToRender = html
 	resultMutex.Unlock()
