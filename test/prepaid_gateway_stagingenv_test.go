@@ -90,8 +90,9 @@ func TestGatewayRegistration(t *testing.T) {
 	if err != nil {
 		t.Errorf("stagingDB(): %s", err)
 	}
+	payment.Setup(db, "test_prefix_")
 
-	gw, err := payment.NewPrepaidGateway(db, "Paypal Prepaid", "staging-test-instance", map[string]string{
+	gw, err := payment.NewPrepaidGateway("Paypal Prepaid", "staging-test-instance", map[string]string{
 		// These 3 needs to be acquired from PayPal developer dashboard
 		"clientID": clientID,
 		"secretID": secretID,

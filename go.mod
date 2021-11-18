@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/TunnelWork/Harpocrates v1.0.1
-	github.com/TunnelWork/Ulysses.Lib v0.1.0
+	github.com/TunnelWork/Ulysses.Lib v0.1.1
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/plutov/paypal/v4 v4.4.1

@@ -14,10 +14,6 @@ import (
 	pp "github.com/plutov/paypal/v4"
 )
 
-const (
-	defaultOrderSqlTable string = "prepaid_paypal_orders"
-)
-
 var (
 	ErrBadInitConf    error = errors.New("paypal: bad initConf")
 	ErrOrderNotPaid   error = errors.New("paypal: order is not in paid state")
@@ -83,9 +79,9 @@ func NewPrepaidGateway(db *sql.DB, instanceID string, initConf interface{}) (pay
 		return nil, ErrBadInitConf
 	}
 	if orderSqlTable, ok = iConf["orderSqlTable"]; !ok {
-		orderSqlTable = defaultOrderSqlTable
+		orderSqlTable = payment.TblPrefix() + `payment_paypal_prepaid_orders`
 	} else if iConf["orderSqlTable"] == "" {
-		orderSqlTable = defaultOrderSqlTable
+		orderSqlTable = payment.TblPrefix() + `payment_paypal_prepaid_orders`
 	}
 
 	c, err := pp.NewClient(clientID, secretID, apiBase)
