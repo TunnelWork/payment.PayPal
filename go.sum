@@ -1,4 +1,3 @@
-github.com/TunnelWork/Harpocrates v1.0.1 h1:C3KZAecUHQC8snRC/dW4sp0UC713uqrQ7N9M4bevYVk=
 github.com/TunnelWork/Harpocrates v1.0.1/go.mod h1:+I/F5JiIvWsllxHEInacG+j9t2IO9jqjvhp1KT0XnKw=
 github.com/TunnelWork/Ulysses.Lib v0.1.11 h1:iumvWgUmjeuOZZ3USVp1pgiYKn6zvYqvO6yMBLMELjI=
 github.com/TunnelWork/Ulysses.Lib v0.1.11/go.mod h1:u2/EULdJzpNEBUvDYfjuXxsEoANrasOzGX+7ZzqvNsM=
@@ -22,9 +21,7 @@ github.com/go-playground/universal-translator v0.17.0 h1:icxd5fm+REJzpZx7ZfpaD87
 github.com/go-playground/universal-translator v0.17.0/go.mod h1:UkSxE5sNxxRwHyU+Scu5vgOQjsIJAF8j9muTVoKLVtA=
 github.com/go-playground/validator/v10 v10.4.1 h1:pH2c5ADXtd66mxoE0Zm9SUhxE20r7aM3F26W0hOn+GE=
 github.com/go-playground/validator/v10 v10.4.1/go.mod h1:nlOn6nFhuKACm19sB/8EGNn9GlaMV7XkbRSipzJ0Ii4=
-github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
 github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
-github.com/golang-jwt/jwt/v4 v4.1.0 h1:XUgk2Ex5veyVFVeLm0xhusUTQybEbexJXrvPNOKkSY0=
 github.com/golang-jwt/jwt/v4 v4.1.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
 github.com/golang/protobuf v1.3.3 h1:gyjaxf+svBWX08ZjK86iN9geUJF0H6gp2IRKX6Nf6/I=
 github.com/golang/protobuf v1.3.3/go.mod h1:vzj43D7+SQXF/4pzW/hwtAqwc6iTitCiVSaWz5lYuqw=

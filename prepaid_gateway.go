@@ -10,7 +10,7 @@ import (
 
 	"github.com/TunnelWork/Ulysses.Lib/api"
 	"github.com/TunnelWork/Ulysses.Lib/payment"
-	"github.com/TunnelWork/payment.PayPal/internal/sqlwrapper"
+	"github.com/TunnelWork/payment.PayPal/v2/internal/sqlwrapper"
 	"github.com/gin-gonic/gin"
 	pp "github.com/plutov/paypal/v4"
 )
