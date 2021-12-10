@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/TunnelWork/Ulysses.Lib/api"
@@ -54,6 +55,7 @@ type PrepaidGateway struct {
 
 	// Handler func used to notify the Ulysses server
 	UpdateHandler *func(referenceID string, newResult payment.PaymentResult)
+	callbackBase  string
 }
 
 // NewPrepaidGateway() is a payment.PrepaidGatewayGen
@@ -63,6 +65,7 @@ func NewPrepaidGateway(db *sql.DB, instanceID string, initConf interface{}) (pay
 	var secretID string
 	var apiBase string
 	var orderSqlTable string
+	var callbackBase string
 	var ok bool
 
 	if iConf, ok = initConf.(map[string]string); !ok {
@@ -82,6 +85,9 @@ func NewPrepaidGateway(db *sql.DB, instanceID string, initConf interface{}) (pay
 		orderSqlTable = payment.TblPrefix() + `payment_paypal_prepaid_orders`
 	} else if iConf["orderSqlTable"] == "" {
 		orderSqlTable = payment.TblPrefix() + `payment_paypal_prepaid_orders`
+	}
+	if callbackBase, ok = iConf["callbackBase"]; !ok {
+		return nil, ErrBadInitConf
 	}
 
 	c, err := pp.NewClient(clientID, secretID, apiBase)
@@ -105,6 +111,7 @@ func NewPrepaidGateway(db *sql.DB, instanceID string, initConf interface{}) (pay
 		initConf:      iConf,
 		sdkScriptURL:  `https://www.paypal.com/sdk/js?client-id=` + clientID + `&currency=`,
 		client:        c,
+		callbackBase:  callbackBase,
 	}
 	pg.onClose = pg.handlerPaypalExperienceOnClose
 
@@ -112,93 +119,30 @@ func NewPrepaidGateway(db *sql.DB, instanceID string, initConf interface{}) (pay
 }
 
 // CheckoutForm() is called when frontend requests a Checkout Form to be rendered
-func (pg *PrepaidGateway) CheckoutForm(pr payment.PaymentRequest) (HTMLCheckoutForm string, err error) {
-
-	var divSmartBtnContainer string = `<div id="smart-button-container"><div style="text-align: center;"><div id="paypal-button-container"></div></div></div>`
-
-	var paypalButtonStyle string = `style: {
-        shape: 'rect',
-        color: 'gold',
-        layout: 'vertical',
-        label: 'paypal',
-    },`
-
+func (pg *PrepaidGateway) CheckoutForm(pr payment.PaymentRequest) (formRenderParams map[string]interface{}, err error) {
 	// Save the pending order to database
+	pr.Item.Price = math.Round(pr.Item.Price*100) / 100
+
 	err = sqlwrapper.PendingOrderID(pg.db, pg.orderSqlTable, pr, PREPAID_GATEWAY)
 	if err != nil {
-		return divSmartBtnContainer, err
+		return nil, err
 	}
-	var paypalButtonCreateOrder string = `
-    createOrder: function(data, actions) {
-        return actions.order.create({
-          purchase_units: [
-            {
-              "reference_id":"` + pr.Item.ReferenceID + `",
-              "amount":{
-                "currency_code":"` + pr.Item.Currency + `",
-                "value": ` + fmt.Sprintf("%f", pr.Item.Price) + `
-              }
-            }
-          ]
-        });
-    },`
 
-	// TODO: Caller to replace '$PAYMENT_CALLBACK_BASE' with 'https://ulysses.tunnel.work/api/payment/callback/'
-	var OnCloseNotifyURL string = `$PAYMENT_CALLBACK_BASE` + fmt.Sprintf("paypal/%s/onClose", pg.instanceID)
+	OnCloseNotifyURL := fmt.Sprintf("%s/paypal/%s/onClose", pg.callbackBase, pg.instanceID)
 
-	// TODO: Caller to replace `$RENDER_PAYMENT_RESULT(data)` with a real JS function
-	// which will use the data as input
-	var paypalButtonOnApprove string = `onApprove: function(data, actions) {
-        return actions.order.capture().then(function(orderData) {
-          $.post( "` + OnCloseNotifyURL + `", { order_id: orderData.id, ref_id: orderData.purchase_units[0].reference_id, action: "approve", capture_id: orderData.purchase_units[0].payments.captures[0].id })
-          .always(function( data ) {
-            $RENDER_PAYMENT_RESULT(data);
-          });
-        });
-    },`
-
-	// TODO: Caller to replace `$RENDER_PAYMENT_RESULT(data)` with a real JS function
-	// which will use the data as input
-	var paypalButtonOnCancel string = `onCancel: function(data) {
-        $.post( "` + OnCloseNotifyURL + `", { ref_id: "` + pr.Item.ReferenceID + `", action: "cancel" })
-        .always(function( data ) {
-            $RENDER_PAYMENT_RESULT(data);
-        });
-    },`
-
-	// TODO: Caller to replace `$RENDER_PAYMENT_RESULT(data, err)` with a real JS function
-	// which will use the data and err as input
-	var paypalButtonOnError string = `onError: function(err) {
-        $.post( "` + OnCloseNotifyURL + `", { ref_id: "` + pr.Item.ReferenceID + `", action: "error" })
-        .always(function( data ) {
-            $RENDER_PAYMENT_RESULT(data, err);
-        });
-    }`
-
-	var scriptFuncInitPayPalButton string = `<script>
-    function initPayPalButton() {
-        paypal.Buttons({
-            ` + paypalButtonStyle + `
-            
-            ` + paypalButtonCreateOrder + `
-            
-            ` + paypalButtonOnApprove + `
-            
-            ` + paypalButtonOnCancel + `
-            
-            ` + paypalButtonOnError + `
-        }).render('#paypal-button-container');
-    }
-</script>`
-	var sdkScriptURLwCurrency string = pg.sdkScriptURL + pr.Item.Currency
-	var scriptJSSDK string = `<script onload="initPayPalButton()" src="` + sdkScriptURLwCurrency + `" data-sdk-integration-source="button-factory"></script>`
-
-	var checkoutForm string = divSmartBtnContainer + `
-    ` + scriptFuncInitPayPalButton + `
-    ` + scriptJSSDK + `
-    `
-
-	return checkoutForm, nil
+	return map[string]interface{}{
+		"notify_url": OnCloseNotifyURL,
+		"purchase_units": []map[string]interface{}{
+			{
+				"reference_id": pr.Item.ReferenceID,
+				"amount": map[string]interface{}{
+					"currency_code": pr.Item.Currency,
+					"value":         pr.Item.Price,
+				},
+			},
+		},
+		"sdk_url": pg.sdkScriptURL + pr.Item.Currency,
+	}, nil
 }
 
 // PaymentResult() is called by Ulysses to ACTIVELY verify an order's payment status

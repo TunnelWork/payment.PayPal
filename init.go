@@ -6,5 +6,5 @@ import (
 
 func init() {
 	var genfunc = NewPrepaidGateway
-	payment.RegisterPrepaidGateway("Paypal Prepaid", genfunc)
+	payment.RegisterPrepaidGatewayGenerator("paypal", genfunc)
 }

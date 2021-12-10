@@ -1,0 +1,77 @@
+<html>
+    <head>
+        <title>Checkout with PayPal</title>
+    </head>
+    <body>
+        <!-- Smart Button Container is the <div> where PayPal buttons will be rendered -->
+        <div id="smart-button-container">
+            <div style="text-align: center;">
+                <div id="paypal-button-container"></div>
+            </div>
+        </div>
+    
+        <!-- Sample render_params for PayPal prepaid payment -->
+        <div>
+            <script type="text/javascript">
+                var sample_render_params = {
+                    "notify_url": "https://ulysses.tunnel.work/api/paypal-notify",
+                    "purchase_units": [
+                        {
+                            "reference_id": "B00B5-DEADBEEF", // Format: {UserIDInHex}-{RandomIdentifierString}
+                            "amount": {
+                                "currency_code": "USD",
+                                "value": 12.05
+                            }
+                        }
+                    ],
+                    "sdk_url": "https://www.paypal.com/sdk/js?client-id=DEADBEEFCAFEC0DE&currency=USD"
+                };  
+            </script>
+        </div>
+
+        <!-- Render the button -->
+        <div id="paypal-button-script">
+            <script>
+                function initPayPalButton(render_params) {
+                    paypal.Buttons({
+                        style: {
+                            shape: 'rect',
+                            color: 'gold',
+                            layout: 'vertical',
+                            label: 'paypal',
+                        },
+                        createOrder: function(data, actions) {
+                            return actions.order.create({purchase_units: render_params['purchase_units']});
+                        },
+                        onApprove: function(data, actions) {
+                            return actions.order.capture().then(function(orderData) {
+                            $.post( render_params['notify_url'], { order_id: orderData.id, ref_id: orderData.purchase_units[0].reference_id, action: "approve", capture_id: orderData.purchase_units[0].payments.captures[0].id })
+                            .always(function( data ) {
+                                console.log(data);
+                            });
+                            });
+                        },
+                        onCancel: function(data) {
+                            $.post( render_params['notify_url'], { ref_id: render_params['purchase_units'][0]['reference_id'], action: "cancel" })
+                            .always(function( data ) {
+                                console.log(data);
+                            });
+                        },
+                        onError: function(err) {
+                            $.post( render_params['notify_url'], { ref_id: render_params['purchase_units'][0]['reference_id'], action: "cancel" })
+                            .always(function( data ) {
+                                console.log(data);
+                            });
+                        }
+                    }).render('#paypal-button-container');
+                }
+            </script>
+        </div>
+
+        <!-- PayPal Official JS SDK -->
+        <div>
+            <!-- src is not to be statically loaded!! It must be set to render_params.sdk_url -->
+            <script src="https://www.paypal.com/sdk/js?client-id=DEADBEEFCAFEC0DE&currency=USD" data-sdk-integration-source="button-factory"></script>
+        </div>
+    </body>
+</html>
